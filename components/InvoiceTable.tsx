@@ -1,5 +1,7 @@
 "use client";
 
+import { FileText, Package } from "lucide-react";
+
 interface InvoiceData {
   [key: string]: unknown;
   items?: Array<Record<string, unknown>>;
@@ -44,7 +46,10 @@ export default function InvoiceTable({ data }: InvoiceTableProps) {
   return (
     <div className="invoice-result">
       <div className="result-section">
-        <h3>📋 Thông tin hóa đơn</h3>
+        <h3>
+          <FileText size={16} style={{ display: "inline", verticalAlign: "middle", marginRight: 8 }} />
+          Thông tin hóa đơn
+        </h3>
         <div className="info-grid">
           {infoFields.map(([key, label]) => (
             <div key={key} className="info-row">
@@ -57,7 +62,10 @@ export default function InvoiceTable({ data }: InvoiceTableProps) {
 
       {items.length > 0 && (
         <div className="result-section">
-          <h3>📦 Chi tiết hàng hóa / dịch vụ</h3>
+          <h3>
+            <Package size={16} style={{ display: "inline", verticalAlign: "middle", marginRight: 8 }} />
+            Chi tiết hàng hóa / dịch vụ
+          </h3>
           <div className="table-wrapper">
             <table className="items-table">
               <thead>

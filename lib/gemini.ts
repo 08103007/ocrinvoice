@@ -6,50 +6,62 @@ interface GeminiPart {
   text?: string;
 }
 
-const INVOICE_PROMPT = `You are a smart accountant assistant.
+const ALL_FIELDS: Record<string, string> = {
+  seller: "Tên người bán",
+  taxCode: "Mã số thuế người bán",
+  address: "Địa chỉ người bán",
+  invoiceNumber: "Số hóa đơn",
+  invoiceSerial: "Ký hiệu hóa đơn",
+  invoiceDate: "DD/MM/YYYY",
+  totalBeforeVAT: "Số tiền trước thuế",
+  vatRate: "Thuế suất (%)",
+  vatAmount: "Tiền thuế GTGT",
+  totalPayment: "Tổng thanh toán",
+  buyer: "Tên người mua",
+  buyerTaxCode: "Mã số thuế người mua",
+  paymentMethod: "Hình thức thanh toán",
+};
+
+function buildPrompt(selectedFields?: string[]): string {
+  const fields = selectedFields || Object.keys(ALL_FIELDS);
+  
+  const fieldEntries: string[] = [];
+  for (const key of fields) {
+    if (key === "items") continue;
+    if (ALL_FIELDS[key]) {
+      fieldEntries.push(`  "${key}": "${ALL_FIELDS[key]}"`);
+    }
+  }
+
+  const includeItems = !selectedFields || selectedFields.includes("items");
+  const itemsBlock = includeItems
+    ? `,\n  "items": [\n    {\n      "description": "Mô tả hàng hóa/dịch vụ",\n      "unit": "Đơn vị tính",\n      "quantity": "Số lượng",\n      "unitPrice": "Đơn giá",\n      "total": "Thành tiền"\n    }\n  ]`
+    : "";
+
+  return `You are a smart accountant assistant.
 From the provided Vietnamese invoice (hóa đơn), extract the following fields and return ONLY a valid JSON object with exactly these fields:
 
 {
-  "seller": "Tên người bán",
-  "taxCode": "Mã số thuế người bán",
-  "address": "Địa chỉ người bán",
-  "invoiceNumber": "Số hóa đơn",
-  "invoiceSerial": "Ký hiệu hóa đơn",
-  "invoiceDate": "DD/MM/YYYY",
-  "totalBeforeVAT": "Số tiền trước thuế",
-  "vatRate": "Thuế suất (%)",
-  "vatAmount": "Tiền thuế GTGT",
-  "totalPayment": "Tổng thanh toán",
-  "buyer": "Tên người mua",
-  "buyerTaxCode": "Mã số thuế người mua",
-  "paymentMethod": "Hình thức thanh toán",
-  "items": [
-    {
-      "description": "Mô tả hàng hóa/dịch vụ",
-      "unit": "Đơn vị tính",
-      "quantity": "Số lượng",
-      "unitPrice": "Đơn giá",
-      "total": "Thành tiền"
-    }
-  ]
+${fieldEntries.join(",\n")}${itemsBlock}
 }
 
 Rules:
 - All amounts should be numbers (no dots as thousand separators). Example: 1500000 not 1.500.000
 - If any field is missing, use "N/A"
 - Return ONLY the JSON object, no markdown, no explanation
-- invoiceDate must be DD/MM/YYYY format
-- items is an array, include ALL line items from the invoice`;
+- invoiceDate must be DD/MM/YYYY format${includeItems ? "\n- items is an array, include ALL line items from the invoice" : ""}`;
+}
 
 export async function extractInvoiceData(
   fileBase64: string,
-  mimeType: string
+  mimeType: string,
+  selectedFields?: string[]
 ): Promise<Record<string, unknown>> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
   const parts: GeminiPart[] = [
     { inlineData: { mimeType, data: fileBase64 } },
-    { text: INVOICE_PROMPT },
+    { text: buildPrompt(selectedFields) },
   ];
 
   const payload = {
@@ -83,7 +95,6 @@ export async function extractInvoiceData(
 }
 
 function parseGeminiResponse(content: string): Record<string, unknown> {
-  // Remove markdown code blocks if present
   let cleaned = content.trim();
   cleaned = cleaned.replace(/^```(?:json)?\s*/i, "");
   cleaned = cleaned.replace(/\s*```$/i, "");

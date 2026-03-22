@@ -5,6 +5,7 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
+    const fieldsParam = formData.get("fields") as string | null;
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json(
         { error: "File too large. Maximum size is 10MB." },
@@ -36,7 +37,8 @@ export async function POST(request: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString("base64");
 
-    const result = await extractInvoiceData(base64, file.type);
+    const selectedFields = fieldsParam ? fieldsParam.split(",") : undefined;
+    const result = await extractInvoiceData(base64, file.type, selectedFields);
 
     return NextResponse.json({
       success: true,
