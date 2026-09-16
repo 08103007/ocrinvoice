@@ -2,6 +2,7 @@ const { app, BrowserWindow, shell, dialog } = require('electron');
 const path = require('path');
 const http = require('http');
 const { fork } = require('child_process');
+const fs = require('fs');
 
 const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged;
 
@@ -19,21 +20,26 @@ function getFreePort() {
   });
 }
 
-function waitForServer(url, timeoutMs = 25000) {
+function waitForServer(url, timeoutMs = 30000) {
   const startTime = Date.now();
   return new Promise((resolve, reject) => {
     const testConnection = () => {
-      http
-        .get(url, (res) => {
-          resolve();
-        })
-        .on('error', () => {
-          if (Date.now() - startTime > timeoutMs) {
-            reject(new Error('Quá thời gian chờ khởi động máy chủ nội bộ.'));
-          } else {
-            setTimeout(testConnection, 250);
-          }
-        });
+      const req = http.get(url, (res) => {
+        resolve();
+      });
+
+      req.on('error', () => {
+        if (Date.now() - startTime > timeoutMs) {
+          reject(new Error('Quá thời gian chờ khởi động máy chủ nội bộ.'));
+        } else {
+          setTimeout(testConnection, 200);
+        }
+      });
+
+      req.setTimeout(1000, () => {
+        req.destroy();
+        setTimeout(testConnection, 200);
+      });
     };
     testConnection();
   });
@@ -45,35 +51,60 @@ async function startServer() {
   }
 
   const port = await getFreePort();
+
   const standaloneDir = app.isPackaged
     ? path.join(process.resourcesPath, 'standalone')
     : path.join(__dirname, '.next', 'standalone');
 
   const serverScript = path.join(standaloneDir, 'server.js');
 
+  if (!fs.existsSync(serverScript)) {
+    throw new Error(`Không tìm thấy file máy chủ tại: ${serverScript}`);
+  }
+
   const env = {
     ...process.env,
     PORT: String(port),
     HOSTNAME: '127.0.0.1',
     NODE_ENV: 'production',
+    ELECTRON_RUN_AS_NODE: '1',
   };
 
   serverProcess = fork(serverScript, [], {
     cwd: standaloneDir,
     env,
-    stdio: 'pipe',
+    stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+    execPath: process.execPath,
   });
+
+  let serverErrorLog = '';
 
   serverProcess.stdout?.on('data', (data) => {
     console.log(`[Next.js Server]: ${data}`);
   });
 
   serverProcess.stderr?.on('data', (data) => {
-    console.error(`[Next.js Server Error]: ${data}`);
+    const str = String(data);
+    serverErrorLog += str;
+    console.error(`[Next.js Server Error]: ${str}`);
+  });
+
+  serverProcess.on('exit', (code) => {
+    if (code !== 0 && code !== null) {
+      console.error(`Server process exited with code ${code}. Errors: ${serverErrorLog}`);
+    }
   });
 
   const appUrl = `http://127.0.0.1:${port}`;
-  await waitForServer(appUrl);
+  try {
+    await waitForServer(appUrl);
+  } catch (err) {
+    if (serverErrorLog) {
+      throw new Error(`${err.message}\nChi tiết lỗi: ${serverErrorLog.substring(0, 300)}`);
+    }
+    throw err;
+  }
+
   return appUrl;
 }
 
@@ -84,7 +115,7 @@ async function createWindow() {
   } catch (err) {
     dialog.showErrorBox(
       'Lỗi Khởi Động',
-      'Không thể khởi động hệ thống ứng dụng: ' + (err.message || err)
+      'Không thể khởi động hệ thống ứng dụng:\n' + (err.message || err)
     );
     app.quit();
     return;
