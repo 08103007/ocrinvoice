@@ -179,14 +179,18 @@ export default function DashboardPage() {
         );
 
         try {
+          const isXml = files[i].name.toLowerCase().endsWith(".xml");
           const formData = new FormData();
           formData.append("file", files[i]);
-          formData.append("fields", selectedFields.join(","));
-          if (userApiKey) {
-            formData.append("apiKey", userApiKey);
+          if (!isXml) {
+            formData.append("fields", selectedFields.join(","));
+            if (userApiKey) {
+              formData.append("apiKey", userApiKey);
+            }
           }
 
-          const res = await fetch("/api/ocr", {
+          const endpoint = isXml ? "/api/xml" : "/api/ocr";
+          const res = await fetch(endpoint, {
             method: "POST",
             body: formData,
           });
@@ -194,7 +198,7 @@ export default function DashboardPage() {
           const json = await res.json();
 
           if (!res.ok) {
-            throw new Error(json.error || "Trích xuất thất bại");
+            throw new Error(json.error || (isXml ? "Đọc file XML thất bại" : "Trích xuất thất bại"));
           }
 
           const fileUrl = URL.createObjectURL(files[i]);
@@ -448,9 +452,9 @@ export default function DashboardPage() {
         ) : !showResults ? (
           <div className="upload-section">
             <div className="section-header">
-              <h2>Tải lên hóa đơn GTGT bản giấy (Ảnh / PDF)</h2>
+              <h2>Tải lên Hóa đơn GTGT (Ảnh, PDF hoặc file XML HĐĐT)</h2>
               <p>
-                Tự động bóc tách bằng Gemini AI và lưu trữ đồng bộ lên cơ sở dữ liệu Supabase.
+                Hỗ trợ đọc hóa đơn giấy (ảnh chụp/scan PDF bằng AI) và file XML Hóa đơn điện tử (TT78/TT32), tự động đồng bộ Supabase.
               </p>
             </div>
 

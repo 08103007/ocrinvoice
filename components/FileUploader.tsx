@@ -25,12 +25,15 @@ const ACCEPTED_TYPES = [
   "image/jpeg",
   "image/jpg",
   "image/webp",
+  "text/xml",
+  "application/xml",
 ];
-const ACCEPTED_EXT = ".pdf,.png,.jpg,.jpeg,.webp";
+const ACCEPTED_EXT = ".pdf,.png,.jpg,.jpeg,.webp,.xml";
 const MAX_FILES = 20;
 const MAX_SIZE = 10 * 1024 * 1024;
 
-function getFileIcon(type: string) {
+function getFileIcon(type: string, name?: string) {
+  if (name?.toLowerCase().endsWith(".xml") || type.includes("xml")) return <FileIcon size={16} />;
   if (type === "application/pdf") return <FileIcon size={16} />;
   return <ImageIcon size={16} />;
 }
@@ -87,12 +90,14 @@ export default function FileUploader({
     setError("");
     const arr = Array.from(files);
     const valid = arr.filter((f) => {
-      if (!ACCEPTED_TYPES.includes(f.type)) return false;
+      const isXml = f.name.toLowerCase().endsWith(".xml");
+      const isAcceptedType = ACCEPTED_TYPES.includes(f.type) || isXml;
+      if (!isAcceptedType) return false;
       if (f.size > MAX_SIZE) return false;
       return true;
     });
     if (valid.length === 0) {
-      setError("Không tìm thấy file hợp lệ (PDF, PNG, JPG, WebP ≤ 10MB)");
+      setError("Không tìm thấy file hợp lệ (PDF, PNG, JPG, WebP, XML ≤ 10MB)");
       return [];
     }
     if (valid.length > MAX_FILES) {
