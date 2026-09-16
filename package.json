@@ -1,6 +1,8 @@
 {
   "name": "ocr-invoice-pro",
   "version": "1.0.0",
+  "description": "OCR Invoice Pro Desktop App",
+  "author": "Antigravity",
   "private": true,
   "main": "electron-main.js",
   "scripts": {
@@ -10,14 +12,29 @@
     "lint": "eslint",
     "electron": "electron .",
     "electron:dev": "concurrently \"next dev\" \"wait-on http://localhost:3000 && electron .\"",
-    "dist": "next build && electron-builder --win"
+    "dist": "next build && node scripts/prepare-standalone.js && electron-builder --win"
   },
   "build": {
     "appId": "com.ocrinvoice.pro",
     "productName": "OCR Invoice Pro",
+    "npmRebuild": false,
+    "nodeGypRebuild": false,
     "directories": {
       "output": "dist"
     },
+    "files": [
+      "package.json",
+      "electron-main.js"
+    ],
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "standalone",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "win": {
       "target": [
         "nsis",
