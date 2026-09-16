@@ -38,7 +38,8 @@ export async function POST(request: Request) {
     const base64 = Buffer.from(arrayBuffer).toString("base64");
 
     const selectedFields = fieldsParam ? fieldsParam.split(",") : undefined;
-    const result = await extractInvoiceData(base64, file.type, selectedFields);
+    const apiKeyParam = (formData.get("apiKey") as string | null) || undefined;
+    const result = await extractInvoiceData(base64, file.type, selectedFields, apiKeyParam);
 
     return NextResponse.json({
       success: true,
