@@ -25,7 +25,7 @@ export const authOptions: AuthOptions = {
   ],
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || "readreceipt_secret_key_2026_antigravity",
 };
 
 const handler = NextAuth(authOptions);

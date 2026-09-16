@@ -28,8 +28,7 @@ export default function LoginPage() {
       setError("Sai tên đăng nhập hoặc mật khẩu");
       setLoading(false);
     } else {
-      router.push("/");
-      router.refresh();
+      window.location.href = "/dashboard";
     }
   };
 
