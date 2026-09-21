@@ -1,5 +1,4 @@
 const getGeminiApiKey = () => process.env.GEMINI_API_KEY || "";
-const getGeminiModel = () => process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 interface GeminiPart {
   inlineData?: { mimeType: string; data: string };
@@ -52,13 +51,14 @@ Rules:
 - invoiceDate must be DD/MM/YYYY format${includeItems ? "\n- items is an array, include ALL line items from the invoice" : ""}`;
 }
 
-const DEFAULT_MODELS = [
+const CANDIDATE_MODELS = [
   process.env.GEMINI_MODEL,
-  "gemini-3.6-flash",
   "gemini-2.5-flash",
   "gemini-2.0-flash",
   "gemini-1.5-flash",
-].filter(Boolean) as string[];
+  "gemini-2.5-flash-lite",
+  "gemini-1.5-pro",
+];
 
 export async function extractInvoiceData(
   fileBase64: string,
@@ -69,7 +69,7 @@ export async function extractInvoiceData(
   const apiKey = customApiKey || getGeminiApiKey();
   if (!apiKey || apiKey === "your_gemini_api_key_here") {
     throw new Error(
-      "Chưa cấu hình GEMINI_API_KEY. Vui lòng thêm GEMINI_API_KEY vào file .env.local hoặc nhập API Key trên giao diện."
+      "Chưa cấu hình GEMINI_API_KEY. Vui lòng thêm GEMINI_API_KEY vào biến môi trường hoặc nhập API Key trên giao diện."
     );
   }
 
@@ -87,9 +87,11 @@ export async function extractInvoiceData(
     },
   };
 
+  // Filter unique valid model names
+  const models = Array.from(new Set(CANDIDATE_MODELS.filter(Boolean))) as string[];
   let lastError = "";
 
-  for (const model of DEFAULT_MODELS) {
+  for (const model of models) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     try {
       const response = await fetch(url, {
@@ -101,31 +103,30 @@ export async function extractInvoiceData(
       if (!response.ok) {
         const errorText = await response.text();
         lastError = `Gemini API (${model}) error ${response.status}: ${errorText}`;
-        // If 404 (model not found), continue loop to next fallback model
-        if (response.status === 404) {
-          console.warn(`Model ${model} not available (404), trying fallback model...`);
-          continue;
-        }
-        throw new Error(lastError);
+        console.warn(`Model ${model} returned HTTP ${response.status}. Automatically falling back to next model...`);
+        // If 503 (Overloaded), 429 (Rate Limit), 404 (Not Found), 500 -> Continue to next fallback model
+        continue;
       }
 
       const result = await response.json();
       const content = result?.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!content) {
-        throw new Error("No content in Gemini response");
+        lastError = `Model ${model} returned empty response`;
+        console.warn(`${lastError}, trying fallback model...`);
+        continue;
       }
 
       return parseGeminiResponse(content);
     } catch (err: unknown) {
-      if (err instanceof Error && err.message.includes("404")) {
-        continue;
-      }
-      throw err;
+      const errMsg = err instanceof Error ? err.message : String(err);
+      lastError = `Error with model ${model}: ${errMsg}`;
+      console.warn(`${lastError}. Trying next fallback model...`);
+      continue;
     }
   }
 
-  throw new Error(lastError || "Không thể kết nối với mô hình Gemini khả dụng.");
+  throw new Error(lastError || "Tất cả các mô hình Gemini đều đang bận hoặc quá tải. Vui lòng thử lại sau ít phút.");
 }
 
 function parseGeminiResponse(content: string): Record<string, unknown> {

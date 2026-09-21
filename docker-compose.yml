@@ -16,7 +16,7 @@ services:
       - HOSTNAME=0.0.0.0
       # AI Gemini API Key (Có thể nhập ở đây hoặc nhập trên giao diện web sau)
       - GEMINI_API_KEY=
-      - GEMINI_MODEL=gemini-3.6-flash
+      - GEMINI_MODEL=gemini-2.5-flash
       
       # Đăng nhập mặc định
       - AUTH_USER=admin
