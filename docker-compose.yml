@@ -9,7 +9,7 @@ services:
     image: ocr-invoice-pro:latest
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "20000:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -19,6 +19,6 @@ services:
       - AUTH_USER=admin
       - AUTH_PASSWORD=invoice2026
       - NEXTAUTH_SECRET=readreceipt_secret_key_2026_antigravity
-      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_URL=http://localhost:20000
       - NEXT_PUBLIC_SUPABASE_URL=https://yimjtyjyxjkirtcgtrsx.supabase.co
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_apZoWnqtyG9fSg2BRgqLaA_eKVOgJpT
