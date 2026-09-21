@@ -15,7 +15,7 @@ services:
       - PORT=3000
       - HOSTNAME=0.0.0.0
       
-      # 1. AI Gemini API Key (Có thể nhập ở đây hoặc nhập trên giao diện web sau)
+      # 1. AI Gemini API Key
       - GEMINI_API_KEY=
       - GEMINI_MODEL=gemini-2.5-flash
       
@@ -25,7 +25,14 @@ services:
       - NEXTAUTH_SECRET=readreceipt_secret_key_2026_antigravity
       - NEXTAUTH_URL=http://localhost:20000
       
-      # 3. Kết nối Database PostgreSQL (Synology NAS / Local Server / VPS)
-      # Định dạng: postgresql://[user]:[password]@[host]:[port]/[database_name]
-      # Ví dụ: postgresql://postgres:mypassword@192.168.1.100:5432/invoice_db
-      - DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
+      # 3. KẾT NỐI DATABASE POSTGRESQL CỦA BẠN:
+      - DATABASE_URL=postgres://postgres:PmcPassword2026!@db:5432/pmcdb
+    networks:
+      - default
+      - pmc_network
+
+networks:
+  default:
+  pmc_network:
+    name: pmc-baogia_default
+    external: true
