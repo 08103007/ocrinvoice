@@ -14,20 +14,18 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      # AI Gemini API Key (Có thể nhập ở đây hoặc nhập trên giao diện web sau)
+      
+      # 1. AI Gemini API Key (Có thể nhập ở đây hoặc nhập trên giao diện web sau)
       - GEMINI_API_KEY=
       - GEMINI_MODEL=gemini-2.5-flash
       
-      # Đăng nhập mặc định
+      # 2. Tài khoản đăng nhập
       - AUTH_USER=admin
       - AUTH_PASSWORD=invoice2026
       - NEXTAUTH_SECRET=readreceipt_secret_key_2026_antigravity
       - NEXTAUTH_URL=http://localhost:20000
       
-      # Kết nối trực tiếp Database PostgreSQL (Synology NAS / Server)
-      # Ví dụ: postgresql://username:password@IP_NAS:5432/ten_database
-      - DATABASE_URL=
-      
-      # Cấu hình Supabase (Dự phòng nếu không dùng PostgreSQL riêng)
-      - NEXT_PUBLIC_SUPABASE_URL=https://yimjtyjyxjkirtcgtrsx.supabase.co
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_apZoWnqtyG9fSg2BRgqLaA_eKVOgJpT
+      # 3. Kết nối Database PostgreSQL (Synology NAS / Local Server / VPS)
+      # Định dạng: postgresql://[user]:[password]@[host]:[port]/[database_name]
+      # Ví dụ: postgresql://postgres:mypassword@192.168.1.100:5432/invoice_db
+      - DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres

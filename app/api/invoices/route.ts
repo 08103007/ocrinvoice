@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { mapInvoiceToDb } from '@/lib/supabase';
-import { dbGetInvoices, dbInsertInvoice, dbDeleteInvoice } from '@/lib/db';
+import { dbGetInvoices, dbInsertInvoice, dbDeleteInvoice, mapInvoiceToDb } from '@/lib/db';
 
 export async function GET() {
   try {

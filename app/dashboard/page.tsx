@@ -51,7 +51,7 @@ export default function DashboardPage() {
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [hasCustomKey, setHasCustomKey] = useState(false);
 
-  // Tabs: 'scan' (quét mới) | 'database' (dữ liệu trên Supabase)
+  // Tabs: 'scan' (quét mới) | 'database' (dữ liệu trên PostgreSQL)
   const [activeTab, setActiveTab] = useState<"scan" | "database">("scan");
   const [dbInvoices, setDbInvoices] = useState<InvoiceResult[]>([]);
   const [loadingDb, setLoadingDb] = useState(false);
@@ -65,7 +65,7 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Fetch invoices from Supabase
+  // Fetch invoices from PostgreSQL
   const fetchDbInvoices = useCallback(async () => {
     setLoadingDb(true);
     try {
@@ -75,7 +75,7 @@ export default function DashboardPage() {
         setDbInvoices(json.invoices);
       }
     } catch (err) {
-      console.error("Lỗi tải hóa đơn từ Supabase:", err);
+      console.error("Lỗi tải hóa đơn từ PostgreSQL:", err);
     } finally {
       setLoadingDb(false);
     }
@@ -87,7 +87,7 @@ export default function DashboardPage() {
     }
   }, [activeTab, fetchDbInvoices]);
 
-  // Save an invoice to Supabase
+  // Save an invoice to PostgreSQL
   const saveInvoiceToDb = async (inv: InvoiceResult) => {
     try {
       const res = await fetch("/api/invoices", {
@@ -101,13 +101,13 @@ export default function DashboardPage() {
       const json = await res.json();
       return json.success;
     } catch (e) {
-      console.error("Lỗi lưu Supabase:", e);
+      console.error("Lỗi lưu PostgreSQL:", e);
       return false;
     }
   };
 
   const deleteDbInvoice = async (id: string) => {
-    if (!confirm("Bạn có chắc muốn xóa hóa đơn này khỏi cơ sở dữ liệu Supabase?")) return;
+    if (!confirm("Bạn có chắc muốn xóa hóa đơn này khỏi cơ sở dữ liệu PostgreSQL?")) return;
     try {
       const res = await fetch(`/api/invoices?id=${id}`, { method: "DELETE" });
       const json = await res.json();
@@ -282,7 +282,7 @@ export default function DashboardPage() {
           <div>
             <h1>OCR Invoice Pro</h1>
             <span style={{ fontSize: "0.75rem", color: "var(--gray-500)" }}>
-              Trích xuất Hóa đơn GTGT & Tích hợp Supabase Database
+              Trích xuất Hóa đơn GTGT & Quản lý CSDL PostgreSQL
             </span>
           </div>
         </div>
@@ -343,7 +343,7 @@ export default function DashboardPage() {
             }}
             onClick={() => setActiveTab("database")}
           >
-            <Database size={15} /> Cơ sở dữ liệu Supabase {dbInvoices.length > 0 && `(${dbInvoices.length})`}
+            <Database size={15} /> Cơ sở dữ liệu PostgreSQL {dbInvoices.length > 0 && `(${dbInvoices.length})`}
           </button>
         </div>
 
@@ -368,7 +368,7 @@ export default function DashboardPage() {
                   className="btn-action-tool"
                   onClick={fetchDbInvoices}
                   disabled={loadingDb}
-                  title="Làm mới danh sách từ Supabase"
+                  title="Làm mới danh sách từ PostgreSQL"
                 >
                   <RefreshCw size={14} className={loadingDb ? "spin" : ""} />
                   Làm mới
@@ -385,14 +385,14 @@ export default function DashboardPage() {
             {loadingDb ? (
               <div style={{ textAlign: "center", padding: "40px", background: "white", borderRadius: "var(--radius)" }}>
                 <RefreshCw size={32} className="spin" style={{ color: "var(--primary-600)", marginBottom: "8px" }} />
-                <p style={{ color: "var(--gray-600)" }}>Đang tải hóa đơn từ Supabase...</p>
+                <p style={{ color: "var(--gray-600)" }}>Đang tải hóa đơn từ PostgreSQL...</p>
               </div>
             ) : filteredDbInvoices.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px", background: "white", borderRadius: "var(--radius)" }}>
                 <Database size={36} style={{ color: "var(--gray-400)", marginBottom: "8px" }} />
                 <p style={{ color: "var(--gray-600)" }}>
                   {dbInvoices.length === 0
-                    ? "Chưa có hóa đơn nào trong CSDL Supabase. Hãy quét hóa đơn để tự động lưu."
+                    ? "Chưa có hóa đơn nào trong CSDL PostgreSQL. Hãy quét hoặc nhập hóa đơn để tự động lưu."
                     : "Không tìm thấy hóa đơn phù hợp với từ khóa."}
                 </p>
               </div>
@@ -431,7 +431,7 @@ export default function DashboardPage() {
                             type="button"
                             className="btn-delete-row"
                             onClick={() => deleteDbInvoice(result.id)}
-                            title="Xóa hóa đơn khỏi Supabase"
+                            title="Xóa hóa đơn khỏi PostgreSQL"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -454,7 +454,7 @@ export default function DashboardPage() {
             <div className="section-header">
               <h2>Tải lên Hóa đơn GTGT (Ảnh, PDF hoặc file XML HĐĐT)</h2>
               <p>
-                Hỗ trợ đọc hóa đơn giấy (ảnh chụp/scan PDF bằng AI) và file XML Hóa đơn điện tử (TT78/TT32), tự động đồng bộ Supabase.
+                Hỗ trợ đọc hóa đơn giấy (ảnh chụp/scan PDF bằng AI) và file XML Hóa đơn điện tử (TT78/TT32), tự động lưu vào PostgreSQL.
               </p>
             </div>
 
@@ -529,7 +529,7 @@ export default function DashboardPage() {
                       </span>
                       {result.savedToDb && (
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.75rem", background: "#ecfdf5", color: "#065f46", padding: "2px 8px", borderRadius: "4px", marginLeft: "8px" }}>
-                          <CheckCircle2 size={12} /> Đã lưu Supabase
+                          <CheckCircle2 size={12} /> Đã lưu PostgreSQL
                         </span>
                       )}
                     </div>
@@ -560,7 +560,7 @@ export default function DashboardPage() {
       />
 
       <footer className="app-footer">
-        <p>OCR Invoice Pro — Gemini AI + Supabase Cloud Database</p>
+        <p>OCR Invoice Pro — Gemini AI + PostgreSQL Database</p>
       </footer>
     </div>
   );
