@@ -16,6 +16,7 @@ import {
   Search,
   CloudUpload,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import FileUploader, { QueueItem } from "@/components/FileUploader";
 import InvoiceTable, { InvoiceData } from "@/components/InvoiceTable";
@@ -55,6 +56,7 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"scan" | "database">("scan");
   const [dbInvoices, setDbInvoices] = useState<InvoiceResult[]>([]);
   const [loadingDb, setLoadingDb] = useState(false);
+  const [dbError, setDbError] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [dbExpandedCards, setDbExpandedCards] = useState<Set<string>>(new Set());
 
@@ -68,13 +70,18 @@ export default function DashboardPage() {
   // Fetch invoices from PostgreSQL
   const fetchDbInvoices = useCallback(async () => {
     setLoadingDb(true);
+    setDbError("");
     try {
       const res = await fetch("/api/invoices");
       const json = await res.json();
       if (json.success && Array.isArray(json.invoices)) {
         setDbInvoices(json.invoices);
+      } else {
+        setDbError(json.error || "Không thể tải danh sách hóa đơn từ CSDL PostgreSQL");
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : "Lỗi kết nối CSDL";
+      setDbError(msg);
       console.error("Lỗi tải hóa đơn từ PostgreSQL:", err);
     } finally {
       setLoadingDb(false);
@@ -88,7 +95,7 @@ export default function DashboardPage() {
   }, [activeTab, fetchDbInvoices]);
 
   // Save an invoice to PostgreSQL
-  const saveInvoiceToDb = async (inv: InvoiceResult) => {
+  const saveInvoiceToDb = async (inv: InvoiceResult): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch("/api/invoices", {
         method: "POST",
@@ -99,10 +106,14 @@ export default function DashboardPage() {
         }),
       });
       const json = await res.json();
-      return json.success;
+      if (json.success) {
+        return { success: true };
+      }
+      return { success: false, error: json.error || "Lỗi lưu CSDL" };
     } catch (e) {
+      const msg = e instanceof Error ? e.message : "Lỗi kết nối máy chủ";
       console.error("Lỗi lưu PostgreSQL:", e);
-      return false;
+      return { success: false, error: msg };
     }
   };
 
@@ -211,9 +222,9 @@ export default function DashboardPage() {
             processedAt: new Date().toISOString(),
           };
 
-          // Tự động lưu lên Supabase Database
-          const isSaved = await saveInvoiceToDb(newInvoice);
-          newInvoice.savedToDb = isSaved;
+          // Tự động lưu lên PostgreSQL Database
+          const saveRes = await saveInvoiceToDb(newInvoice);
+          newInvoice.savedToDb = saveRes.success;
 
           newResults.push(newInvoice);
 
@@ -387,6 +398,19 @@ export default function DashboardPage() {
                 <RefreshCw size={32} className="spin" style={{ color: "var(--primary-600)", marginBottom: "8px" }} />
                 <p style={{ color: "var(--gray-600)" }}>Đang tải hóa đơn từ PostgreSQL...</p>
               </div>
+            ) : dbError ? (
+              <div style={{ textAlign: "center", padding: "30px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: "var(--radius)", color: "#991b1b" }}>
+                <AlertCircle size={36} style={{ color: "#dc2626", marginBottom: "8px" }} />
+                <p style={{ fontWeight: 600, fontSize: "1rem", marginBottom: "4px" }}>Chưa kết nối được với PostgreSQL Database</p>
+                <p style={{ fontSize: "0.875rem", color: "#7f1d1d", marginBottom: "12px", fontFamily: "monospace" }}>{dbError}</p>
+                <div style={{ fontSize: "0.8rem", color: "#374151", background: "white", padding: "12px", borderRadius: "6px", textAlign: "left", maxWidth: "600px", margin: "0 auto", border: "1px solid #e5e7eb" }}>
+                  <strong>Hướng dẫn kiểm tra:</strong>
+                  <ul style={{ margin: "6px 0 0 18px", lineHeight: "1.6" }}>
+                    <li>Đảm bảo biến <code>DATABASE_URL</code> trong <code>docker-compose.yml</code> đúng định dạng: <code>postgres://user:pass@host:port/dbname</code></li>
+                    <li>Nếu kết nối cùng Docker network với PostgreSQL (ví dụ container <code>db</code>), hãy khai báo network <code>pmc-baogia_default</code>.</li>
+                  </ul>
+                </div>
+              </div>
             ) : filteredDbInvoices.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px", background: "white", borderRadius: "var(--radius)" }}>
                 <Database size={36} style={{ color: "var(--gray-400)", marginBottom: "8px" }} />
@@ -527,10 +551,42 @@ export default function DashboardPage() {
                       <span className="file-name-text" title={result.fileName}>
                         {result.fileName}
                       </span>
-                      {result.savedToDb && (
+                      {result.savedToDb ? (
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.75rem", background: "#ecfdf5", color: "#065f46", padding: "2px 8px", borderRadius: "4px", marginLeft: "8px" }}>
                           <CheckCircle2 size={12} /> Đã lưu PostgreSQL
                         </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const res = await saveInvoiceToDb(result);
+                            if (res.success) {
+                              setResults((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, savedToDb: true } : item))
+                              );
+                              alert("Đã lưu hóa đơn vào PostgreSQL thành công!");
+                            } else {
+                              alert("Lỗi kết nối PostgreSQL: " + (res.error || "Kiểm tra DATABASE_URL trong docker-compose.yml"));
+                            }
+                          }}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            fontSize: "0.75rem",
+                            background: "#fef2f2",
+                            color: "#b91c1c",
+                            padding: "2px 8px",
+                            borderRadius: "4px",
+                            marginLeft: "8px",
+                            border: "1px solid #fecaca",
+                            cursor: "pointer",
+                          }}
+                          title="Bấm để lưu vào PostgreSQL"
+                        >
+                          <AlertCircle size={12} /> Chưa lưu CSDL (Bấm để thử lưu)
+                        </button>
                       )}
                     </div>
                   </div>
