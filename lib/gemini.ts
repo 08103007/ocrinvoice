@@ -51,8 +51,12 @@ Rules:
 - invoiceDate must be DD/MM/YYYY format${includeItems ? "\n- items is an array, include ALL line items from the invoice" : ""}`;
 }
 
+const envModel = process.env.GEMINI_MODEL && !process.env.GEMINI_MODEL.includes("3.6")
+  ? process.env.GEMINI_MODEL
+  : undefined;
+
 const CANDIDATE_MODELS = [
-  process.env.GEMINI_MODEL,
+  envModel,
   "gemini-2.5-flash",
   "gemini-2.0-flash",
   "gemini-1.5-flash",
